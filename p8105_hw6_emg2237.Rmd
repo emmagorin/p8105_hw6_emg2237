@@ -7,7 +7,8 @@ output: github_document
 
 ```{r}
 library(tidyverse)
-library(rvest)
+library(modelr)
+library(p8105.datasets)
 
 knitr::opts_chunk$set(
   fig.width = 6,
@@ -29,7 +30,36 @@ The Washington Post has gathered data on homicides in 50 large U.S. cities and m
 
 Create a city_state variable (e.g. “Baltimore, MD”), and a binary variable indicating whether the homicide is solved. Omit cities Dallas, TX; Phoenix, AZ; and Kansas City, MO – these don’t report victim race. Also omit Tulsa, AL – this is a data entry mistake. For this problem, limit your analysis those for whom victim_race is white or black. Be sure that victim_age is numeric.
 
+```{r}
+homicide_df =
+  read_csv("data/homicide-data.csv") %>% 
+  mutate(
+    city_state = str_c(city, state, sep = ", "),
+    victim_age = as.numeric(victim_age),
+    resolution = case_when(
+      disposition == "Closed without arrest" ~ 0,
+      disposition == "Open/No arrest"        ~ 0,
+      disposition == "Closed by arrest"      ~ 1,
+    )
+  ) %>% 
+  filter(city_state != "Tulsa, AL",
+         victim_race %in% c("White", "Black")) %>% 
+  select(city_state, resolution, victim_age, victim_race, victim_sex)
+```
+
 For the city of Baltimore, MD, use the glm function to fit a logistic regression with resolved vs unresolved as the outcome and victim age, sex and race as predictors. Save the output of glm as an R object; apply the broom::tidy to this object; and obtain the estimate and confidence interval of the adjusted odds ratio for solving homicides comparing non-white victims to white victims keeping all other variables fixed.
+
+```{r}
+baltimore_df = 
+  homicide_df %>% 
+  filter(city_state == "Baltimore, MD")
+
+glm(resolution ~ victim_age + victim_race + victim_sex,
+    data = baltimore_df,
+    family = binomial()) %>% 
+  broom::tidy()
+```
+
 
 Now run glm for each of the cities in your dataset, and extract the adjusted odds ratio (and CI) for solving homicides comparing Black victims to white victims. Do this within a “tidy” pipeline, making use of purrr::map, list columns, and unnest as necessary to create a dataframe with estimated ORs and CIs for each city.
 
