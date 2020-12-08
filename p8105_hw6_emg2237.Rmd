@@ -57,7 +57,14 @@ baltimore_df =
 glm(resolution ~ victim_age + victim_race + victim_sex,
     data = baltimore_df,
     family = binomial()) %>% 
-  broom::tidy()
+  broom::tidy() %>% 
+  mutate(
+    OR = exp(estimate),
+    CI_lower = exp(estimate - 1.96 * std.error),
+    CI_upper = exp(estimate + 1.96 * std.error)
+  ) %>% 
+  select(term, OR, starts_with("CI")) %>% 
+  knitr:: kable(digits = 3)
 ```
 
 
