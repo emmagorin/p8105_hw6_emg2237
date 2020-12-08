@@ -70,9 +70,55 @@ glm(resolution ~ victim_age + victim_race + victim_sex,
 
 Now run glm for each of the cities in your dataset, and extract the adjusted odds ratio (and CI) for solving homicides comparing Black victims to white victims. Do this within a “tidy” pipeline, making use of purrr::map, list columns, and unnest as necessary to create a dataframe with estimated ORs and CIs for each city.
 
+```{r}
+models_results_df = 
+  homicide_df %>% 
+  nest(data = -city_state) %>% 
+  mutate(
+    models = 
+      map(.x = data, ~glm(resolution ~ victim_age + victim_race + victim_sex, data = .x, family = binomial())),
+    results = map(models, broom::tidy)
+  ) %>% 
+  select(city_state, results) %>% 
+  unnest(results) %>% 
+  mutate(
+    OR = exp(estimate),
+    CI_lower = exp(estimate - 1.96 * std.error),
+    CI_upper = exp(estimate + 1.96 * std.error)
+  ) %>% 
+  select(city_state, term, OR, starts_with("CI"))
+```
+
 Create a plot that shows the estimated ORs and CIs for each city. Organize cities according to estimated OR, and comment on the plot.
 
+```{r}
+models_results_df %>% 
+  filter(term == "victim_sexMale") %>% 
+  mutate(city_state = fct_reorder(city_state, OR)) %>% 
+  ggplot(aes(x = city_state, y = OR)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = CI_lower, ymax = CI_upper)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+In most cities, odds of homicide being resolved by arrest are lower in male vs female victims.
+
 ## Problem 2
+
+Class notes:
+build a model of our choice, compare to two given models using cross validation.
+If you give R an interaction term only, it will look at the main effects as well automatically.
+Approach: Maybe start with given models and compare using cross validation, then look at new model and add it to the other results. If my model doesn't work as well as the first one, maybe reconsider.
+Example of looking at residuals:
+```{r}
+#First make model called model_fit
+baby_df %>% 
+  modelr::add_residuals(model_fit) %>% 
+  ggplot(aes(x = gaweeks, y = resid)) +
+  geom_point()
+```
+
+
 In this problem, you will analyze data gathered to understand the effects of several variables on a child’s birthweight. This dataset, available here, consists of roughly 4000 children and includes the following variables:
 
 babysex: baby’s sex (male = 1, female = 2)
@@ -108,6 +154,11 @@ Make this comparison in terms of the cross-validated prediction error; use cross
 Note that although we expect your model to be reasonable, model building itself is not a main idea of the course and we don’t necessarily expect your model to be “optimal”.
 
 ## Problem 3
+Class notes:
+fit linear model of max temp against min temp. Interested in R squared, and then also log(B0*B1) - don't delta method
+Download dataset, fit model, make sure you can compute r2 - using broom glance, and the other thing using broom tidy, then get estimated coefficients, then rearrange things so that you have intercept and slope available to take log. Try this with one sample first, THEN figure out how to do with bootstrap.
+
+
 For this problem, we’ll use the 2017 Central Park weather data that we’ve seen elsewhere. The code chunk below (adapted from the course website) will download these data.
 
 weather_df = 
