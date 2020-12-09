@@ -141,7 +141,24 @@ ppbmi: mother’s pre-pregnancy BMI
 ppwt: mother’s pre-pregnancy weight (pounds)
 smoken: average number of cigarettes smoked per day during pregnancy
 wtgain: mother’s weight gain during pregnancy (pounds)
+
 Load and clean the data for regression analysis (i.e. convert numeric to factor where appropriate, check for missing data, etc.).
+
+```{r}
+birthweight_df =
+  read_csv("./data/birthweight.csv") %>% 
+  mutate(
+    baby_sex = recode(babysex, `1` = "male", `2` = "female")
+  ) %>% 
+  rename(
+    ga_weeks = gaweeks,
+    baby_length_cm = blength,
+    baby_head_cm = bhead,
+    baby_weight_g = bwt
+  ) %>% 
+  select(baby_weight_g, baby_length_cm, ga_weeks, baby_head_cm, baby_sex) # to add: anything I use for a model
+```
+
 
 Propose a regression model for birthweight. This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. Describe your modeling process and show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
 
@@ -150,6 +167,11 @@ Compare your model to two others:
 One using length at birth and gestational age as predictors (main effects only)
 One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
 Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate.
+
+```{r}
+cv_df = 
+```
+
 
 Note that although we expect your model to be reasonable, model building itself is not a main idea of the course and we don’t necessarily expect your model to be “optimal”.
 
