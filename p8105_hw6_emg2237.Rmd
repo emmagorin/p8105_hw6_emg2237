@@ -105,20 +105,6 @@ In most cities, odds of homicide being resolved by arrest are lower in male vs f
 
 ## Problem 2
 
-Class notes:
-build a model of our choice, compare to two given models using cross validation.
-If you give R an interaction term only, it will look at the main effects as well automatically.
-Approach: Maybe start with given models and compare using cross validation, then look at new model and add it to the other results. If my model doesn't work as well as the first one, maybe reconsider.
-Example of looking at residuals:
-```{r}
-#First make model called model_fit
-baby_df %>% 
-  modelr::add_residuals(model_fit) %>% 
-  ggplot(aes(x = gaweeks, y = resid)) +
-  geom_point()
-```
-
-
 In this problem, you will analyze data gathered to understand the effects of several variables on a child’s birthweight. This dataset, available here, consists of roughly 4000 children and includes the following variables:
 
 babysex: baby’s sex (male = 1, female = 2)
@@ -228,7 +214,11 @@ cv_df %>%
   ) %>% 
   ggplot(aes(x = model, y = rmse)) +
   geom_violin()
+
 ```
+
+**It looks like the model including length, head circumference, and all of the interaction terms best predicts birthweight. Compared to the model including just length and gestational age, the model including these variables as well as maternal smoking, maternal weight and maternal age is better able to predict birthweight** 
+
 Note that although we expect your model to be reasonable, model building itself is not a main idea of the course and we don’t necessarily expect your model to be “optimal”.
 
 ## Problem 3
