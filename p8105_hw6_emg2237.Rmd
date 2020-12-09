@@ -154,13 +154,46 @@ birthweight_df =
     ga_weeks = gaweeks,
     baby_length_cm = blength,
     baby_head_cm = bhead,
-    baby_weight_g = bwt
+    baby_weight_g = bwt,
+    mom_age = momage,
+    mom_weight_lb = delwt,
+    smoke_n = smoken
   ) %>% 
-  select(baby_weight_g, baby_length_cm, ga_weeks, baby_head_cm, baby_sex) # to add: anything I use for a model
+  select(baby_weight_g, baby_length_cm, ga_weeks, baby_head_cm, baby_sex, mom_age, mom_weight_lb, smoke_n) # to add: anything I use for a model
 ```
 
 
 Propose a regression model for birthweight. This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. Describe your modeling process and show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
+
+**I was curious about the potential association between maternal smoking and birthweight. In addition to smoking, I decided to include maternal age and maternal weight in the model, which I think could be potential confounders. I also included gestational age and length at birth, since I was curious if maternal smoking would be associated with low birth weight even after adjusting for these factors.**
+
+```{r}
+my_mod = lm(baby_weight_g ~ mom_age + mom_weight_lb + ga_weeks + baby_length_cm + smoke_n, data = birthweight_df)
+birthweight_df %>% 
+  modelr::add_residuals(my_mod) %>% 
+  modelr::add_predictions(my_mod) %>% 
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point()
+```
+
+**As you can see in the plot above, there is one baby with a predicted birthweight of < 0. I investigate this further below.**
+
+```{r}
+birthweight_df %>% 
+  modelr::add_residuals(my_mod) %>% 
+  modelr::add_predictions(my_mod) %>% 
+  filter(pred < 1000) %>% 
+  head()
+```
+
+**It turns out this particular baby's length in cm is listed as 20 - which seems implausible based on its gestational age. I decided to remove this observation from the dataset for the rest of the problem. **
+
+```{r}
+birthweight_df = 
+  birthweight_df %>% 
+  filter(baby_length_cm > 20)
+```
+
 
 Compare your model to two others:
 
@@ -172,14 +205,14 @@ Make this comparison in terms of the cross-validated prediction error; use cross
 cv_df = 
   crossv_mc(birthweight_df, 100) %>%
   mutate(
-    length_ga_mod  = map(train, ~lm(baby_weight_g ~ baby_length_cm + ga_weeks, data = .x)),
-    head_length_sex_mod  = map(train, ~lm(baby_weight_g ~ baby_head_cm * baby_length_cm * baby_sex, data = .x)),
-    #my_mod  = map(train, ~lm())
+    length_ga_mod = map(train, ~lm(baby_weight_g ~ baby_length_cm + ga_weeks, data = .x)),
+    head_length_sex_mod = map(train, ~lm(baby_weight_g ~ baby_head_cm * baby_length_cm * baby_sex, data = .x)),
+    my_mod = map(train, ~lm(baby_weight_g ~ mom_age + mom_weight_lb + ga_weeks + baby_length_cm + smoke_n, data = .x))
     ) %>% 
   mutate(
     rmse_length_ga = map2_dbl(.x = length_ga_mod, .y = test, ~rmse(model = .x, data = .y)),
     rmse_head_length_sex = map2_dbl(.x = head_length_sex_mod, .y = test, ~rmse(model = .x, data = .y)),
-    #rmse_my_mod = map2_dbl(.x = wiggly_mod, .y = test, ~rmse(model = .x, data = .y))
+    rmse_my_mod = map2_dbl(.x = my_mod, .y = test, ~rmse(model = .x, data = .y))
   )
 ```
 
