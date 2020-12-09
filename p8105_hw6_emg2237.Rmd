@@ -170,9 +170,32 @@ Make this comparison in terms of the cross-validated prediction error; use cross
 
 ```{r}
 cv_df = 
+  crossv_mc(birthweight_df, 100) %>%
+  mutate(
+    length_ga_mod  = map(train, ~lm(baby_weight_g ~ baby_length_cm + ga_weeks, data = .x)),
+    head_length_sex_mod  = map(train, ~lm(baby_weight_g ~ baby_head_cm * baby_length_cm * baby_sex, data = .x)),
+    #my_mod  = map(train, ~lm())
+    ) %>% 
+  mutate(
+    rmse_length_ga = map2_dbl(.x = length_ga_mod, .y = test, ~rmse(model = .x, data = .y)),
+    rmse_head_length_sex = map2_dbl(.x = head_length_sex_mod, .y = test, ~rmse(model = .x, data = .y)),
+    #rmse_my_mod = map2_dbl(.x = wiggly_mod, .y = test, ~rmse(model = .x, data = .y))
+  )
 ```
 
-
+As we did in class, let's compare the models:
+```{r}
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model",
+    values_to = "rmse",
+    names_prefix = "rmse_"
+  ) %>% 
+  ggplot(aes(x = model, y = rmse)) +
+  geom_violin()
+```
 Note that although we expect your model to be reasonable, model building itself is not a main idea of the course and we don’t necessarily expect your model to be “optimal”.
 
 ## Problem 3
