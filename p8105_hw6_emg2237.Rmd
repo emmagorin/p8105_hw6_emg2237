@@ -257,7 +257,7 @@ Use 5000 bootstrap samples and, for each bootstrap sample, produce estimates of 
 ```{r}
 bootstrap_results_df = 
   weather_df %>% 
-  bootstrap(5, id = "strap_number") %>% 
+  bootstrap(5000, id = "strap_number") %>% 
   mutate(
     models = map(.x = strap, ~lm(tmax ~ tmin, data = .x)),
     res_broom_tidy = map(models, broom::tidy),
@@ -275,6 +275,32 @@ bootstrap_results_df =
 ```
 
 
-Plot the distribution of your estimates, and describe these in words. Using the 5000 bootstrap estimates, identify the 2.5% and 97.5% quantiles to provide a 95% confidence interval for r̂ 2 and log(β̂ 0∗β̂ 1). Note: broom::glance() is helpful for extracting r̂ 2 from a fitted regression, and broom::tidy() (with some additional wrangling) should help in computing log(β̂ 0∗β̂ 1).
+Plot the distribution of your estimates, and describe these in words. 
+
+```{r}
+bootstrap_results_df %>% 
+  ggplot(aes(x = r_squared)) +
+  geom_density()
+
+bootstrap_results_df %>% 
+  ggplot(aes(x = log_b0_b1)) +
+  geom_density()
+```
+
+**Both the density plot of r squared and the density plot of log(β̂ 0∗β̂1)show a roughly normal distribuion. R squared appears to have a mean of around .913 while log(β̂ 0∗β̂ 1) appears to have a mean of around 2.02. **
+
+Using the 5000 bootstrap estimates, identify the 2.5% and 97.5% quantiles to provide a 95% confidence interval for r̂ 2 and log(β̂ 0∗β̂ 1).
+
+```{r}
+bootstrap_results_df %>% 
+  pivot_longer(cols = r_squared:log_b0_b1, names_to = "term", values_to = "estimate") %>% 
+  group_by(term) %>% 
+  summarize(
+    ci_lower = quantile(estimate, 0.025),
+    ci_upper = quantile(estimate, 0.975)
+  )
+```
+
+Note: broom::glance() is helpful for extracting r̂ 2 from a fitted regression, and broom::tidy() (with some additional wrangling) should help in computing log(β̂ 0∗β̂ 1).
 
 
