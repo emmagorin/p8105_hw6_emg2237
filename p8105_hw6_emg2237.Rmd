@@ -222,13 +222,9 @@ cv_df %>%
 Note that although we expect your model to be reasonable, model building itself is not a main idea of the course and we don’t necessarily expect your model to be “optimal”.
 
 ## Problem 3
-Class notes:
-fit linear model of max temp against min temp. Interested in R squared, and then also log(B0*B1) - don't delta method
-Download dataset, fit model, make sure you can compute r2 - using broom glance, and the other thing using broom tidy, then get estimated coefficients, then rearrange things so that you have intercept and slope available to take log. Try this with one sample first, THEN figure out how to do with bootstrap.
-
-
 For this problem, we’ll use the 2017 Central Park weather data that we’ve seen elsewhere. The code chunk below (adapted from the course website) will download these data.
 
+```{r}
 weather_df = 
   rnoaa::meteo_pull_monitors(
     c("USW00094728"),
@@ -240,10 +236,45 @@ weather_df =
     tmin = tmin / 10,
     tmax = tmax / 10) %>%
   select(name, id, everything())
-The boostrap is helpful when you’d like to perform inference for a parameter / value / summary that doesn’t have an easy-to-write-down distribution in the usual repeated sampling framework. We’ll focus on a simple linear regression with tmax as the response and tmin as the predictor, and are interested in the distribution of two quantities estimated from these data:
+```
+
+The bootstrap is helpful when you’d like to perform inference for a parameter / value / summary that doesn’t have an easy-to-write-down distribution in the usual repeated sampling framework. We’ll focus on a simple linear regression with tmax as the response and tmin as the predictor, and are interested in the distribution of two quantities estimated from these data:
+
+Try it for one regression:
+```{r}
+lm(tmax ~ tmin, data = weather_df) %>% 
+  broom::glance()
+
+lm(tmax ~ tmin, data = weather_df) %>% 
+  broom::tidy()
+```
+
 
 r̂ 2
 log(β̂ 0∗β̂ 1)
-Use 5000 bootstrap samples and, for each bootstrap sample, produce estimates of these two quantities. Plot the distribution of your estimates, and describe these in words. Using the 5000 bootstrap estimates, identify the 2.5% and 97.5% quantiles to provide a 95% confidence interval for r̂ 2 and log(β̂ 0∗β̂ 1). Note: broom::glance() is helpful for extracting r̂ 2 from a fitted regression, and broom::tidy() (with some additional wrangling) should help in computing log(β̂ 0∗β̂ 1).
+Use 5000 bootstrap samples and, for each bootstrap sample, produce estimates of these two quantities.
+
+```{r}
+bootstrap_results_df = 
+  weather_df %>% 
+  bootstrap(5, id = "strap_number") %>% 
+  mutate(
+    models = map(.x = strap, ~lm(tmax ~ tmin, data = .x)),
+    res_broom_tidy = map(models, broom::tidy),
+    res_broom_glance = map(models, broom::glance)
+  ) %>% 
+  select(strap_number, res_broom_tidy, res_broom_glance) %>% 
+  unnest(res_broom_tidy) %>% 
+  select(strap_number, term, estimate, res_broom_glance) %>% 
+  pivot_wider(names_from = term, values_from = estimate) %>% 
+  janitor::clean_names() %>% 
+  mutate(log_b0_b1 = log(intercept * tmin)) %>% 
+  unnest(res_broom_glance) %>% 
+  select(strap_number, log_b0_b1, r.squared) %>% 
+  janitor::clean_names()
+```
+
+
+Plot the distribution of your estimates, and describe these in words. Using the 5000 bootstrap estimates, identify the 2.5% and 97.5% quantiles to provide a 95% confidence interval for r̂ 2 and log(β̂ 0∗β̂ 1). Note: broom::glance() is helpful for extracting r̂ 2 from a fitted regression, and broom::tidy() (with some additional wrangling) should help in computing log(β̂ 0∗β̂ 1).
 
 
